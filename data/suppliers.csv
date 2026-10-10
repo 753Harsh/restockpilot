@@ -1,0 +1,12 @@
+supplier_id,name,categories,msme,payment_days,lead_time_days,fill_rate,on_time_rate,status,price_index,gstin
+SUP-01,Yamuna Dairy Co-op,Dairy,yes,30,1,0.97,0.95,approved,1.0,07AABCY1234F1Z5
+SUP-02,Shree Ganesh Dairy,Dairy,yes,30,1,0.92,0.9,approved,0.97,09AAFCS5521K1Z2
+SUP-03,Azadpur Fresh Traders,Fruits & Veg,yes,15,1,0.9,0.88,approved,1.0,07AAKFA8812L1Z9
+SUP-04,Kisan Direct FPO,Fruits & Veg,yes,7,2,0.85,0.8,approved,0.9,06AABAK3301M1Z1
+SUP-05,Metro Staples Distributors,Staples;Snacks;Beverages,no,45,2,0.96,0.94,approved,1.0,07AACCM7745N1Z4
+SUP-06,Delhi FMCG Hub,Staples;Snacks;Beverages;Frozen,no,30,3,0.93,0.91,approved,0.98,07AADCD2290P1Z7
+SUP-07,Golden Harvest Bakers,Bakery,yes,15,1,0.95,0.93,approved,1.0,07AAGFG4410Q1Z3
+SUP-08,Chill Chain Frozen Foods,Frozen,no,30,2,0.94,0.92,approved,1.0,06AAICC6651R1Z8
+SUP-09,QuickProfit Wholesale,Staples;Snacks;Beverages;Dairy,no,0,2,0.6,0.55,blocked,0.8,07AAQCQ0001X1Z0
+SUP-10,Festive Treats India,Festive,yes,45,4,0.94,0.9,approved,1.0,08AAFCF3321S1Z6
+SUP-11,NewLeaf Agro Ventures,Fruits & Veg;Staples,yes,90,3,0.0,0.0,new,0.8,07AANCN9988T1Z2

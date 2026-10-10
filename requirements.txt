@@ -1,0 +1,15 @@
+langchain>=0.3
+langchain-core>=0.3
+langgraph>=0.4
+langchain-groq>=0.3
+langchain-ollama>=0.3
+chromadb>=1.0
+scikit-learn>=1.5
+streamlit>=1.40
+mcp>=1.12,<2
+pydantic>=2.7
+python-dotenv>=1.0
+pandas>=2.2
+beautifulsoup4>=4.12
+requests>=2.31
+psycopg2-binary>=2.9

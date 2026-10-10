@@ -1,0 +1,294 @@
+{
+  "name": "RestockPilot 1 - Restock alert (Slack, email, SMS)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "restock-alert",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "b3ba88e6-3375-593d-bfbc-c00bd06a6a65",
+      "name": "Webhook: restock alert",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build the alert text from the RestockPilot payload\nconst p = $input.first().json.body ?? $input.first().json;\nconst lines = (p.lines || []).map(l => `- ${l.sku_name}: ${l.qty} from ${l.supplier_name}, Rs ${Math.round(l.value)} (${l.priority}, ${l.label})`);\nconst blocked = (p.lines || []).some(l => l.label === 'NEVER');\nconst p1 = (p.lines || []).some(l => l.priority === 'P1');\nconst message = `RestockPilot alert for ${p.store}\\nCase ${p.case_id}: ${p.title}\\n${lines.join('\\n')}`;\nconst sms = `RestockPilot ${p.case_id}: ${p1 ? 'stock-out risk (P1). ' : ''}${blocked ? 'An order was BLOCKED. ' : ''}Check Slack/email.`;\nreturn [{ json: { case_id: p.case_id, title: p.title, message, sms, urgent: p1 || blocked, line_count: lines.length } }];"
+      },
+      "id": "11fe8c5e-848a-50b4-b37f-fe68e99cdd44",
+      "name": "Build message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "value": "public",
+          "mode": "list"
+        },
+        "table": {
+          "__rl": true,
+          "value": "alerts",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "case_id": "={{ $json.case_id }}",
+            "message": "={{ $json.message }}",
+            "urgent": "={{ $json.urgent }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "ff66254e-d9f3-5150-8d52-f6623049a4b4",
+      "name": "Log alert in Postgres",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        440,
+        120
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.urgent }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "27fd99a0-e8f2-5728-aa2a-ac605d66ef64",
+      "name": "Urgent? (P1 or blocked)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#store-ops",
+          "mode": "name"
+        },
+        "text": "={{ $json.message }}",
+        "otherOptions": {}
+      },
+      "id": "327f689a-6a3e-5ef2-8389-c5410c5afeef",
+      "name": "Slack: #store-ops",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        700,
+        180
+      ],
+      "credentials": {
+        "slackApi": {
+          "id": "2",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "restockpilot@zipbasket.example",
+        "toEmail": "ds07.manager@zipbasket.example",
+        "subject": "=RestockPilot {{ $json.case_id }}: {{ $json.title }}",
+        "emailFormat": "text",
+        "text": "={{ $json.message }}",
+        "options": {}
+      },
+      "id": "bdae4ef6-5bf2-5cd7-b07e-8431cc627251",
+      "name": "Email store manager (SMTP)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        700,
+        320
+      ],
+      "credentials": {
+        "smtp": {
+          "id": "3",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "from": "+15005550006",
+        "to": "+919800000000",
+        "message": "={{ $json.sms }}",
+        "options": {}
+      },
+      "id": "6f40579a-8cd2-56e1-b624-2ca3d176be72",
+      "name": "SMS on-call manager (Twilio)",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        700,
+        460
+      ],
+      "credentials": {
+        "twilioApi": {
+          "id": "4",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#restock-digest",
+          "mode": "name"
+        },
+        "text": "={{ $json.message }}",
+        "otherOptions": {}
+      },
+      "id": "a467866b-9eaf-5727-9837-0434e06416fd",
+      "name": "Slack: daily digest",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        700,
+        600
+      ],
+      "credentials": {
+        "slackApi": {
+          "id": "2",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"received\": true } }}",
+        "options": {}
+      },
+      "id": "3a4799bb-7470-53dc-8f60-8af0b17ad293",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        960,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: restock alert": {
+      "main": [
+        [
+          {
+            "node": "Build message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build message": {
+      "main": [
+        [
+          {
+            "node": "Urgent? (P1 or blocked)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log alert in Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Urgent? (P1 or blocked)": {
+      "main": [
+        [
+          {
+            "node": "Slack: #store-ops",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Email store manager (SMTP)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SMS on-call manager (Twilio)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Slack: daily digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email store manager (SMTP)": {
+      "main": [
+        [
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": []
+}

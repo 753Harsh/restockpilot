@@ -1,0 +1,19 @@
+sku,name,category,unit_cost,mrp,shelf_life_days,case_pack,shelf_capacity
+SKU-101,Toned Milk 500 ml,Dairy,27,29,3,24,600
+SKU-102,Curd 400 g,Dairy,38,45,10,12,300
+SKU-103,Paneer 200 g,Dairy,78,95,12,10,200
+SKU-104,Brown Bread 400 g,Bakery,40,50,5,10,150
+SKU-105,Eggs (pack of 6),Dairy,42,54,14,12,250
+SKU-201,Onion 1 kg,Fruits & Veg,32,45,20,10,500
+SKU-202,Tomato 1 kg,Fruits & Veg,26,40,6,10,300
+SKU-203,Potato 1 kg,Fruits & Veg,22,32,30,10,500
+SKU-204,Banana (6 pcs),Fruits & Veg,30,45,4,12,200
+SKU-301,Whole Wheat Atta 5 kg,Staples,205,260,90,4,120
+SKU-302,Toor Dal 1 kg,Staples,148,180,180,10,200
+SKU-303,Sunflower Oil 1 L,Staples,128,160,270,12,200
+SKU-304,Sugar 1 kg,Staples,42,52,365,10,200
+SKU-401,Cola 750 ml,Beverages,30,40,180,24,400
+SKU-402,Potato Chips 52 g,Snacks,15,20,120,48,600
+SKU-403,Instant Noodles 4-pack,Snacks,48,60,240,24,300
+SKU-501,Vanilla Ice Cream 700 ml,Frozen,120,199,180,6,80
+SKU-601,Dry Fruit Gift Box 500 g,Festive,420,699,180,6,150

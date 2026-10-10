@@ -1,0 +1,263 @@
+{
+  "name": "RestockPilot 2 - Market news scraper and summary",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 5 * * *"
+            }
+          ]
+        }
+      },
+      "id": "0482bd6e-ddc7-5fe9-9b18-6a6116864a0c",
+      "name": "Every morning 5:30",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Market news pages to watch. For the demo, serve data/news with:\n//   python -m http.server 8000 --directory data\nconst base = 'http://localhost:8000/news/';\nreturn ['onion_prices.html','dairy_plant_shutdown.html','cricket_final.html','wholesale_deal.html']\n  .map(p => ({ json: { url: base + p } }));"
+      },
+      "id": "77db2539-c3a6-5dc1-8ea6-ee25e8496b0d",
+      "name": "News page list",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "outputPropertyName": "html"
+            }
+          }
+        }
+      },
+      "id": "c8ec755c-882b-557c-9dba-526459d1d650",
+      "name": "Fetch page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "sourceData": "json",
+        "dataPropertyName": "html",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "title",
+              "cssSelector": "h1"
+            },
+            {
+              "key": "text",
+              "cssSelector": "article p",
+              "returnArray": false
+            }
+          ]
+        },
+        "options": {
+          "trimValues": true
+        }
+      },
+      "id": "1ccff7a1-6134-5ada-a6f6-2f25229c8c5a",
+      "name": "Extract article text",
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Same safety idea as rules.py: drop sentences that give orders to an AI\nconst bad = [/ignore (all |any )?(previous|prior) instructions/i, /do not ask (a |the )?manager/i, /approve (all|every) orders?/i, /note to ai/i, /is now (fully )?approved/i];\nreturn $input.all().map(item => {\n  const sentences = (item.json.text || '').split(/(?<=[.!?])\\s+/);\n  const kept = sentences.filter(s => !bad.some(r => r.test(s)));\n  return { json: { url: item.json.url, title: item.json.title, text: kept.join(' '), removed: sentences.length - kept.length } };\n});"
+      },
+      "id": "9ca1a41a-6eec-5dd6-adc2-7da0997d9ca0",
+      "name": "Safety filter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Summarise this market news for a dark store purchase planner in two sentences. Say which products and suppliers it affects and whether demand goes up or down.\n\n{{ $json.title }}\n{{ $json.text }}"
+      },
+      "id": "b008a32c-b6d1-5223-a90f-8e4534ba6bae",
+      "name": "Summarise for planners",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        1100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {
+          "temperature": 0
+        }
+      },
+      "id": "c106d785-fbee-58fd-92f6-0876eecda229",
+      "name": "Groq chat model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        520
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "5",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "value": "public",
+          "mode": "list"
+        },
+        "table": {
+          "__rl": true,
+          "value": "news_signals",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "title": "={{ $('Safety filter').item.json.title }}",
+            "summary": "={{ $json.text }}",
+            "removed_sentences": "={{ $('Safety filter').item.json.removed }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "106ab607-6c1c-5124-b95a-3fcd51f626b7",
+      "name": "Save to Postgres news_signals",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1340,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every morning 5:30": {
+      "main": [
+        [
+          {
+            "node": "News page list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "News page list": {
+      "main": [
+        [
+          {
+            "node": "Fetch page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch page": {
+      "main": [
+        [
+          {
+            "node": "Extract article text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract article text": {
+      "main": [
+        [
+          {
+            "node": "Safety filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Safety filter": {
+      "main": [
+        [
+          {
+            "node": "Summarise for planners",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarise for planners": {
+      "main": [
+        [
+          {
+            "node": "Save to Postgres news_signals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq chat model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Summarise for planners",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": []
+}
