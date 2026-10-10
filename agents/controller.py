@@ -69,20 +69,29 @@ def memo(case, lines, decisions, llm, log):
     blocked = [l for l in lines if l["label"] == "NEVER"]
     rejected = [l for l in lines if decisions.get(l["line_id"]) == "REJECTED"]
     total = sum(l["value"] for l in placed)
-    facts = {"case": case["title"], "placed": [(l["sku_name"], l["qty"], l["supplier_name"], l["value"]) for l in placed],
+    who = {"AUTO": "auto-approved by rules (manager did not see it)", "APPROVED": "approved by the store manager"}
+    facts = {"case": case["title"],
+             "placed": [(l["sku_name"], l["qty"], l["supplier_name"], l["value"], who[decisions[l["line_id"]]])
+                        for l in placed],
              "blocked": [(l["sku_name"], l["supplier_name"], l["approval_reasons"]) for l in blocked],
              "rejected_by_manager": [l["sku_name"] for l in rejected], "total_value": total}
     if llm is not None:
         try:
-            text = llm.invoke(skill("CONTROLLER") + "\n\nWrite the final purchase memo (under 120 words) "
-                              "from these facts only:\n" + json.dumps(facts)).content
-            log("controller", "AI wrote the memo")
-            return text
+            text = llm.invoke(skill("CONTROLLER") + "\n\nThe review is finished. Now write the final purchase memo "
+                              "for the store manager in plain text, not JSON, under 120 words. Use these facts "
+                              "only and say for each line who approved it:\n" + json.dumps(facts)).content.strip()
+            # code checks the memo: it must be prose and must not invent a manager approval
+            if text.startswith("{") or ("manager has approved" in text.lower() and not any(
+                    decisions.get(l["line_id"]) == "APPROVED" for l in lines)):
+                log("controller", "AI memo failed the code check, using the template instead")
+            else:
+                log("controller", "AI wrote the memo")
+                return text
         except Exception as e:
             log("controller", f"AI memo failed ({type(e).__name__}), using template")
     parts = [f"Purchase memo for case {case['case_id']}: {case['title']}."]
     if placed:
-        parts.append("Ordered: " + "; ".join(f"{q} x {n} from {s} (Rs {v:,.0f})" for n, q, s, v in facts["placed"])
+        parts.append("Ordered: " + "; ".join(f"{q} x {n} from {s} (Rs {v:,.0f}, {w})" for n, q, s, v, w in facts["placed"])
                      + f". Total Rs {total:,.0f}.")
     else:
         parts.append("No purchase order was placed.")
