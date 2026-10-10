@@ -10,7 +10,7 @@ from typing import List
 from pydantic import BaseModel, Field
 
 from data_store import SUPPLIERS
-from llm import skill
+from llm import skill, structured
 import rules
 
 
@@ -49,7 +49,7 @@ def review(lines, risky_suppliers, attempt, llm, log):
         try:
             table = [{k: ln[k] for k in ("sku", "sku_name", "supplier_id", "supplier_name", "lead_time",
                                           "cover_days", "qty", "value", "reason", "source_doc")} for ln in lines]
-            r = llm.with_structured_output(Review).invoke(
+            r = structured(llm, Review,
                 skill("CONTROLLER") + "\n\nPurchase plan:\n" + json.dumps(table)
                 + f"\nSuppliers with a news risk: {risky_suppliers}\nReview the plan.")
             comment = r.comment
