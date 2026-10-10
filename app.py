@@ -6,7 +6,11 @@
 
 Run:  streamlit run app.py
 """
+import base64
+import json
 import os
+import zlib
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -49,13 +53,33 @@ st.sidebar.caption("Dark store replenishment agents for ZipBasket, DS-07 Saket (
 page = st.sidebar.radio("Page", ["Run a restock case", "Market news & policy", "Store dashboard & how it works"])
 force = st.sidebar.toggle("Force backup mode (no AI)", value=os.getenv("FORCE_BACKUP") == "1")
 os.environ["FORCE_BACKUP"] = "1" if force else "0"
-st.sidebar.markdown(f"**Mode:** {mode_label()}")
+
+# Replay: show a run saved from another server (used to make full-size report screenshots)
+REPLAY = {}
+if os.getenv("REPLAY_DIR"):
+    for f in sorted(Path(os.getenv("REPLAY_DIR")).glob("*.json")):
+        REPLAY[f.stem] = json.loads(f.read_text())
+    pick = st.sidebar.selectbox("Recorded run", ["(none)"] + list(REPLAY))
+    if pick != "(none)":
+        rec = REPLAY[pick]
+        st.session_state.run = {"tid": rec["thread"], "state": rec["state"], "pause": rec["pause"],
+                                "cid": rec["case_id"], "replay": rec}
+st.sidebar.markdown(f"**Mode:** {st.session_state.get('run', {}).get('replay', {}).get('mode') or mode_label()}")
 st.sidebar.markdown(f"**Run date:** {RUN_DATE:%d %b %Y}  \n**Database:** {db.backend()}")
 
 CASES = {c["case_id"]: c for c in load_cases()}
 
 
 # ---------------------------------------------------------------- page 1
+def record_box(run, stage):
+    """A compact copy of this run, so it can be saved for the project report."""
+    rec = {"case_id": run["cid"], "thread": run["tid"], "stage": stage, "mode": mode_label(),
+           "recorded_at": datetime.now().strftime("%d %b %Y %H:%M"), "state": run["state"], "pause": run["pause"]}
+    blob = base64.b64encode(zlib.compress(json.dumps(rec, default=str).encode())).decode()
+    with st.expander("Run record (for the project report)"):
+        st.code(blob, language=None, wrap_lines=True)
+
+
 def show_lines(lines):
     rows = []
     for ln in lines:
@@ -95,6 +119,9 @@ def page_run():
             tid, state, pause = workflow.start(cid)
         st.session_state.run = {"tid": tid, "state": state, "pause": pause.value if pause else None, "cid": cid}
     run = st.session_state.get("run")
+    if run and run.get("replay"):
+        cid = run["cid"]
+        st.caption(f"Recorded run of {cid}, {run['replay']['mode']}, {run['replay']['recorded_at']}")
     if not run or run["cid"] != cid:
         st.info("Pick a case and press Run case.")
         return
@@ -138,6 +165,8 @@ def page_run():
     if rv.get("comment"):
         st.caption("Controller: " + rv["comment"])
 
+    if not run.get("replay"):
+        record_box(run, "approval" if run["pause"] else "result")
     if run["pause"]:
         st.subheader("🧑‍💼 Manager approval needed")
         answers = {}
@@ -147,7 +176,7 @@ def page_run():
                        f"{badge(ln['priority'])}<br><small>{'; '.join(ln['approval_reasons'])}</small>",
                        unsafe_allow_html=True)
             answers[ln["line_id"]] = b.radio("Decision", ["approve", "reject"], key=ln["line_id"], horizontal=True)
-        if st.button("Submit decision", type="primary"):
+        if not run.get("replay") and st.button("Submit decision", type="primary"):
             with st.spinner("Placing orders..."):
                 state = workflow.resume(run["tid"], answers)
             st.session_state.run = {**run, "state": state, "pause": None}
@@ -245,6 +274,12 @@ def page_dashboard():
 | MANAGER | Rs 25,000 to 2,00,000, new supplier, news risk, or news changed demand |
 | NEVER | Blocked supplier, MSME on more than 45 day terms, above Rs 2,00,000, above shelf space, price not below MRP, no GSTIN |
 """)
+    if st.button("Run the 10 test cases in AI mode (slow: waits between cases for the free Groq limit)"):
+        import subprocess, sys
+        with st.spinner("Running tests with AI, this takes several minutes..."):
+            out = subprocess.run([sys.executable, "test_cases.py", "--wait", "20"], capture_output=True, text=True,
+                                 cwd=os.path.dirname(os.path.abspath(__file__)), env={**os.environ, "FORCE_BACKUP": "0"})
+        st.code(out.stdout[-6000:] or out.stderr[-3000:])
     if st.button("Run the 10 test cases (backup mode)"):
         import subprocess, sys
         with st.spinner("Running tests..."):
