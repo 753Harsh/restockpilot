@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 import knowledge
 import rules
 from data_store import SKUS, STOCK, SUPPLIERS
-from llm import skill
+from llm import skill, structured
 from tools import RUN_DATE, scrape_news
 
 
@@ -116,7 +116,7 @@ def run(case, llm, log, feedback=None, avoid=None, cover_by_sku=None):
                       + "\n\nDays of cover with the usual supplier:\n" + json.dumps(cover_by_sku or {})
                       + "\n\nKnowledge base passages:\n" + "\n\n".join(f"[{h['source']}] {h['text'][:500]}" for h in rag)
                       + (f"\n\nThe Finance Controller sent your plan back:\n{feedback}" if feedback else ""))
-            plan = llm.with_structured_output(ScoutPlan).invoke(prompt)
+            plan = structured(llm, ScoutPlan, prompt)
             log("scout", f"AI read {len(pages)} pages and chose {len(plan.choices)} suppliers")
         except Exception as e:
             log("scout", f"AI failed ({type(e).__name__}: {str(e)[:120]}), using backup rules")
