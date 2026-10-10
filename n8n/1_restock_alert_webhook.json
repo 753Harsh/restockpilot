@@ -5,7 +5,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "restock-alert",
-        "responseMode": "responseNode",
+        "responseMode": "onReceived",
         "options": {}
       },
       "id": "b3ba88e6-3375-593d-bfbc-c00bd06a6a65",
@@ -15,7 +15,8 @@
       "position": [
         0,
         300
-      ]
+      ],
+      "webhookId": "0f6b1c2a-3d4e-4f50-8a61-72b8c9d0e1f2"
     },
     {
       "parameters": {
@@ -200,21 +201,6 @@
           "name": "Slack account"
         }
       }
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ { \"received\": true } }}",
-        "options": {}
-      },
-      "id": "3a4799bb-7470-53dc-8f60-8af0b17ad293",
-      "name": "Respond OK",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        960,
-        300
-      ]
     }
   ],
   "connections": {
@@ -267,17 +253,6 @@
         [
           {
             "node": "Slack: daily digest",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Email store manager (SMTP)": {
-      "main": [
-        [
-          {
-            "node": "Respond OK",
             "type": "main",
             "index": 0
           }
