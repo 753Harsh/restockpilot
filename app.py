@@ -65,7 +65,8 @@ if os.getenv("REPLAY_DIR"):
         st.session_state.run = {"tid": rec["thread"], "state": rec["state"], "pause": rec["pause"],
                                 "cid": rec["case_id"], "replay": rec}
 st.sidebar.markdown(f"**Mode:** {st.session_state.get('run', {}).get('replay', {}).get('mode') or mode_label()}")
-st.sidebar.markdown(f"**Run date:** {RUN_DATE:%d %b %Y}  \n**Database:** {db.backend()}")
+_where = "recorded run" if st.session_state.get("run", {}).get("replay") else db.backend()
+st.sidebar.markdown(f"**Run date:** {RUN_DATE:%d %b %Y}  \n**Database:** {_where}")
 
 CASES = {c["case_id"]: c for c in load_cases()}
 
@@ -106,7 +107,9 @@ def page_run():
     st.write("Three AI agents check one restock request. Plain code does the maths and the safety rules, "
              "and the store manager approves anything risky.")
     c1, c2 = st.columns([3, 1])
-    cid = c1.selectbox("Sample case", list(CASES), format_func=lambda k: f"{k}  {CASES[k]['title']}")
+    rep = (st.session_state.get("run") or {}).get("replay")
+    cid = c1.selectbox("Sample case", list(CASES), format_func=lambda k: f"{k}  {CASES[k]['title']}",
+                       index=list(CASES).index(rep["case_id"]) if rep else 0, disabled=bool(rep))
     case = CASES[cid]
     with c1.expander("Case details", expanded=True):
         st.write(f"**Trigger:** {case['trigger']}")
