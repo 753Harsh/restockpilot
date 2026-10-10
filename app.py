@@ -113,7 +113,7 @@ def page_run():
                        "Trend %": s["trend_pct"], "Events applied": ", ".join(f["events_to_apply"]) or "-",
                        "Stock risk": f["stock_risk"], "Code check": f.get("checked_by_code", "ok")})
     st.dataframe(pd.DataFrame(f_rows), hide_index=True, use_container_width=True)
-    st.caption(f"Tool calls made: {len(state.get('tool_calls', []))}  ("
+    st.caption(f"Lookups made: {len(state.get('tool_calls', []))}  ("
                + ", ".join(sorted({c['tool'] for c in state.get('tool_calls', [])})) + ")")
 
     st.subheader("Agent 2 - Supplier Scout: what is the market saying, who should supply?")
