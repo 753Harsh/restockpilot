@@ -4,6 +4,7 @@ Version history
 - v1.0 (5 Oct 2026): first version, one prompt for all agents.
 - v1.1 (8 Oct 2026): split into one section per agent; added the shared safety rules.
 - v1.2 (10 Oct 2026): told the analyst to name events exactly as the calendar does; told the scout not to double count a calendar event with a news story; told the controller to check supplier lead time against days of cover; told the scout to keep the usual supplier unless there is a reason to switch.
+- v1.3 (10 Oct 2026): after the first live AI run, the memo request now asks for plain text and for who approved each line (one memo came back as JSON, another claimed a manager approval that never happened); code now checks the memo too.
 
 ## SHARED
 
