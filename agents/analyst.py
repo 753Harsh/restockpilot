@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 
 import rules
 from data_store import SKUS
-from llm import skill
+from llm import skill, structured
 from tools import ANALYST_TOOLS, RUN_DATE, stock_position, upcoming_events
 
 TOOLS = {t.name: t for t in ANALYST_TOOLS}
@@ -70,7 +70,7 @@ def run(case, llm, log):
                     msgs.append(ToolMessage(content=out, tool_call_id=tc["id"]))
             prompt = (skill("ANALYST") + "\n\nTool results:\n" + "\n".join(results)
                       + f"\n\nGive your findings for SKUs {case['skus']}.")
-            findings = llm.with_structured_output(DemandFindings).invoke(prompt)
+            findings = structured(llm, DemandFindings, prompt)
             log("analyst", f"AI made {len(calls)} tool calls")
         except Exception as e:
             log("analyst", f"AI failed ({type(e).__name__}: {str(e)[:120]}), using backup rules")
