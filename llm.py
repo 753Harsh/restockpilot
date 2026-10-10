@@ -56,3 +56,22 @@ def skill(section: str) -> str:
     text = SKILL_FILE.read_text(encoding="utf-8")
     parts = dict(re.findall(r"^## (\w+)\n(.*?)(?=^## |\Z)", text, re.S | re.M))
     return (parts.get("SHARED", "") + "\n" + parts.get(section.upper(), "")).strip()
+
+def structured(llm, schema, prompt):
+    """Ask for an answer that fits a Pydantic schema.
+
+    Groq's JSON-schema mode is tried first. If the model or provider refuses it,
+    forced tool calling and then plain JSON mode are tried, so one quirk does not
+    push the whole agent into backup mode.
+    """
+    last = None
+    for method in ("json_schema", "function_calling", "json_mode"):
+        try:
+            p = prompt
+            if method == "json_mode":
+                p = (f"{prompt}\n\nReply with one JSON object only that matches this JSON schema:\n"
+                     f"{schema.model_json_schema()}")
+            return llm.with_structured_output(schema, method=method).invoke(p)
+        except Exception as e:          # try the next method
+            last = e
+    raise last
